@@ -1,0 +1,77 @@
+// This is the Prisma Schema for the PostgreSQL database
+// Use: `npx prisma db push` to sync with DB
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String      @id @default(uuid())
+  email     String      @unique
+  name      String?
+  workspaces Workspace[]
+}
+
+model Workspace {
+  id        String   @id @default(uuid())
+  name      String
+  ownerId   String
+  owner     User     @relation(fields: [ownerId], references: [id])
+  pages     Page[]
+  createdAt DateTime @default(now())
+}
+
+model Page {
+  id         String   @id @default(uuid())
+  title      String
+  content    String?  // JSON string for BlockNote content
+  coverImage String?
+  icon       String?
+  isArchived Boolean  @default(false) // For Trash feature
+  isFavorite Boolean  @default(false) // For Favorites sidebar section
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  
+  // Hierarchy
+  workspaceId String?
+  workspace   Workspace?      @relation(fields: [workspaceId], references: [id])
+  parentId    String?         // Can be inside another page
+  parent      Page?           @relation("PageHierarchy", fields: [parentId], references: [id])
+  children    Page[]          @relation("PageHierarchy")
+
+  // Database Properties (If this page acts as a Database)
+  // A Page can define properties for its children
+  databaseProperties DatabaseProperty[]
+
+  // Property Values (If this page is a Row in a Database)
+  properties PropertyValue[]
+}
+
+// Defines a column in a database (e.g., "Status", "Due Date")
+model DatabaseProperty {
+  id        String @id @default(uuid())
+  pageId    String // The parent page acting as a Database
+  page      Page   @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  name      String
+  type      String // "text", "number", "select", "multi-select", "date", "checkbox"
+  options   String? // JSON string for Select options (colors, labels)
+  
+  values    PropertyValue[]
+}
+
+// Stores the actual value for a specific cell
+model PropertyValue {
+  id        String @id @default(uuid())
+  pageId    String
+  page      Page   @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  
+  propertyId String
+  property   DatabaseProperty @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  
+  value     String // JSON string (stores the actual data)
+}
