@@ -1,3 +1,6 @@
+---
+alwaysApply: false
+---
 // Start of Selection
 // Sistemde mevcut prompt kontrolü ve geliştirme alanı
 // Bu bölümde yeni prompt’lar sisteme entegre edilirken, mevcut yapı korunur.

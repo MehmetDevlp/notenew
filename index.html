@@ -1,39 +1,46 @@
 <!doctype html>
 <html lang="en" class="dark">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline' 'unsafe-eval' http://localhost:5173" />
-    <title>My Notion Clone</title>
-    <style>
-      /* Prevent FOUC (Flash of Unstyled Content) */
-      html, body {
-        background-color: #191919; /* Default dark background */
-        color: #D4D4D4;
-        margin: 0;
-        padding: 0;
-        height: 100%;
-      }
-      /* Initial loader if needed */
-      #root {
-        height: 100%;
-      }
-    </style>
-    <script type="module">
-      if (import.meta.hot?.on) {
-        import.meta.hot.on('vite:error', (error) => {
-          if (error.err) {
-            console.error(
-              [error.err.message, error.err.frame].filter(Boolean).join('\n'),
-            )
-          }
-        })
-      }
-    </script>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self' http://localhost:5173; script-src 'self' 'unsafe-inline' 'unsafe-eval' http://localhost:5173; style-src 'self' 'unsafe-inline' 'unsafe-eval' http://localhost:5173 https://fonts.googleapis.com; connect-src 'self' ws://localhost:5173 http://localhost:5173; img-src 'self' data: http://localhost:5173 https:; font-src 'self' http://localhost:5173 data: https://fonts.gstatic.com;" />
+  <title>My Notion Clone</title>
+  <style>
+    /* Prevent FOUC (Flash of Unstyled Content) */
+    html,
+    body {
+      background-color: #191919;
+      /* Default dark background */
+      color: #D4D4D4;
+      margin: 0;
+      padding: 0;
+      height: 100%;
+    }
+
+    /* Initial loader if needed */
+    #root {
+      height: 100%;
+    }
+  </style>
+  <script type="module">
+    if (import.meta.hot?.on) {
+      import.meta.hot.on('vite:error', (error) => {
+        if (error.err) {
+          console.error(
+            [error.err.message, error.err.frame].filter(Boolean).join('\n'),
+          )
+        }
+      })
+    }
+  </script>
+</head>
+
+<body>
+  <div id="root"></div>
+  <script type="module" src="/src/main.tsx"></script>
+</body>
+
 </html>

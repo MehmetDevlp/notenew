@@ -1,26 +1,15 @@
 import { v4 as uuidv4 } from 'uuid';
-
-// Mock types
-interface Page {
-    id: string;
-    title: string;
-    content: any[];
-    parentId: string | null;
-    isDatabase: boolean;
-    databaseId: string | null;
-    createdAt: number;
-    updatedAt: number;
-    properties: any;
-}
+import { Database, Page, Property } from '../types/database';
 
 // Check if we are running in a browser environment (no electronAPI)
 if (!window.electronAPI) {
   console.log('Running in browser mode - using localStorage mock');
-  
+
   const PAGES_KEY = 'notion_clone_pages';
   const DB_PROPS_KEY = 'notion_clone_db_props';
   const PROP_VALUES_KEY = 'notion_clone_prop_values';
-  
+  const DATABASES_KEY = 'notion_clone_databases';
+
   const getStorage = (key: string) => {
     try {
       const stored = localStorage.getItem(key);
@@ -35,87 +24,168 @@ if (!window.electronAPI) {
     localStorage.setItem(key, JSON.stringify(data));
   };
 
-  window.electronAPI = {
-    // --- PAGES ---
-    getPages: async () => {
-      return getStorage(PAGES_KEY);
-    },
-    
-    getPage: async (id: string) => {
-      const pages = getStorage(PAGES_KEY);
-      return pages.find((p: any) => p.id === id);
-    },
-    
-    createPage: async (parentId?: string) => {
-      const pages = getStorage(PAGES_KEY);
-      const newPage = {
+  const dbApi = {
+    // --- DATABASE ---
+    createDatabase: async (input: { title: string; parentPageId?: string }): Promise<Database> => {
+      const dbs = getStorage(DATABASES_KEY);
+      const newDb: Database = {
         id: uuidv4(),
-        title: 'Untitled',
-        content: [],
-        parentId: parentId || null,
-        isDatabase: false,
-        databaseId: null,
-        createdAt: Date.now(),
-        updatedAt: Date.now()
+        title: input.title,
+        parent_page_id: input.parentPageId || null,
+        created_at: Date.now(),
+        updated_at: Date.now(),
+        icon: null,
+        cover_url: null
       };
-      
-      pages.push(newPage);
-      saveStorage(PAGES_KEY, pages);
-      return newPage;
+      dbs.push(newDb);
+      saveStorage(DATABASES_KEY, dbs);
+      return newDb;
     },
-    
-    updatePage: async (id: string, updates: any) => {
-      const pages = getStorage(PAGES_KEY);
-      const index = pages.findIndex((p: any) => p.id === id);
-      if (index !== -1) {
-        pages[index] = { ...pages[index], ...updates, updatedAt: Date.now() };
-        saveStorage(PAGES_KEY, pages);
-      }
-    },
-    
-    deletePage: async (id: string) => {
-      let pages = getStorage(PAGES_KEY);
-      pages = pages.filter((p: any) => p.id !== id); // Simple delete, no recursive for mock
-      saveStorage(PAGES_KEY, pages);
+    getDatabase: async (id: string): Promise<Database | null> => {
+      const dbs = getStorage(DATABASES_KEY);
+      return dbs.find((d: any) => d.id === id) || null;
     },
 
-    // --- DATABASE PROPERTIES ---
-    getDatabaseProperties: async (databaseId: string) => {
-        const props = getStorage(DB_PROPS_KEY);
-        return props.filter((p: any) => p.databaseId === databaseId);
-    },
-
-    createDatabaseProperty: async (databaseId: string, name: string, type: string, options?: any) => {
+    // --- PROPERTIES ---
+    db: {
+      addProperty: async (databaseId: string, name: string, type: string, config?: any): Promise<Property> => {
         const props = getStorage(DB_PROPS_KEY);
         const newProp = {
-            id: uuidv4(),
-            databaseId,
-            name,
-            type,
-            options
+          id: uuidv4(),
+          database_id: databaseId,
+          name,
+          type,
+          config: config || {},
+          order_index: props.filter((p: any) => p.database_id === databaseId).length,
+          visible: true,
+          created_at: Date.now()
         };
         props.push(newProp);
         saveStorage(DB_PROPS_KEY, props);
-        return newProp;
+        return newProp as any;
+      },
+      updateProperty: async (id: string, updates: any) => {
+        const props = getStorage(DB_PROPS_KEY);
+        const index = props.findIndex((p: any) => p.id === id);
+        if (index !== -1) {
+          props[index] = { ...props[index], ...updates };
+          saveStorage(DB_PROPS_KEY, props);
+        }
+      },
+      deleteProperty: async (id: string) => {
+        let props = getStorage(DB_PROPS_KEY);
+        props = props.filter((p: any) => p.id !== id);
+        saveStorage(DB_PROPS_KEY, props);
+      },
+      getProperties: async (databaseId: string): Promise<Property[]> => {
+        const props = getStorage(DB_PROPS_KEY);
+        return props
+          .filter((p: any) => p.database_id === databaseId)
+          .sort((a: any, b: any) => a.order_index - b.order_index);
+      }
     },
 
-    // --- PROPERTY VALUES ---
-    getPropertyValues: async (pageId: string) => {
-        const values = getStorage(PROP_VALUES_KEY);
-        // Join with properties logic omitted for mock simplicity
-        return values.filter((v: any) => v.pageId === pageId);
+    // --- PAGES ---
+    page: {
+      create: async (parentId: string, parentType: 'database' | 'page' = 'database'): Promise<Page> => {
+        const pages = getStorage(PAGES_KEY);
+        // Ensure parentType is valid for the mock
+        const pType = parentType === 'database' || parentType === 'page' ? parentType : 'page';
+
+        const newPage: Page = {
+          id: uuidv4(),
+          title: 'Untitled',
+          content: [],
+          parent_id: parentId || null,
+          parent_type: pType,
+          is_archived: false,
+          is_favorite: false,
+          created_at: Date.now(),
+          updated_at: Date.now(),
+          icon: null,
+          cover_image: null,
+          type: 'doc'
+        };
+        pages.push(newPage);
+        saveStorage(PAGES_KEY, pages);
+        return newPage;
+      },
+      get: async (id: string): Promise<Page | null> => {
+        const pages = getStorage(PAGES_KEY);
+        return pages.find((p: any) => p.id === id) || null;
+      },
+      getMany: async (parentId: string): Promise<Page[]> => {
+        const pages = getStorage(PAGES_KEY);
+        if (parentId === null) return pages; // Legacy support
+        return pages.filter((p: any) => p.parent_id === parentId);
+      },
+      update: async (id: string, updates: any) => {
+        const pages = getStorage(PAGES_KEY);
+        const index = pages.findIndex((p: any) => p.id === id);
+        if (index !== -1) {
+          pages[index] = { ...pages[index], ...updates, updated_at: Date.now() };
+          saveStorage(PAGES_KEY, pages);
+        }
+      },
+      delete: async (id: string) => {
+        let pages = getStorage(PAGES_KEY);
+        pages = pages.filter((p: any) => p.id !== id);
+        saveStorage(PAGES_KEY, pages);
+      }
     },
 
-    setPropertyValue: async (pageId: string, propertyId: string, value: any) => {
+    // --- VALUES ---
+    value: {
+      set: async (pageId: string, propertyId: string, value: any) => {
         const values = getStorage(PROP_VALUES_KEY);
         const index = values.findIndex((v: any) => v.pageId === pageId && v.propertyId === propertyId);
-        
         if (index !== -1) {
-            values[index].value = value;
+          values[index].value = JSON.stringify(value);
         } else {
-            values.push({ id: uuidv4(), pageId, propertyId, value });
+          values.push({
+            id: uuidv4(),
+            pageId,
+            propertyId,
+            value: JSON.stringify(value)
+          });
         }
         saveStorage(PROP_VALUES_KEY, values);
+      },
+      get: async (pageId: string, propertyId: string) => {
+        const values = getStorage(PROP_VALUES_KEY);
+        const found = values.find((v: any) => v.pageId === pageId && v.propertyId === propertyId);
+        return found ? JSON.parse(found.value) : null;
+      },
+      getPageMap: async (pageId: string) => {
+        const values = getStorage(PROP_VALUES_KEY);
+        const pageValues = values.filter((v: any) => v.pageId === pageId);
+        return pageValues.reduce((acc: any, curr: any) => {
+          acc[curr.propertyId] = JSON.parse(curr.value);
+          return acc;
+        }, {});
+      }
+    }
+  };
+
+  window.electronAPI = {
+    ...dbApi,
+
+    // --- LEGACY / ALIASES ---
+    // Cast to any to avoid strict Page vs Document mismatches
+    getDocuments: async () => dbApi.page.getMany(null as any) as any,
+    getDocument: dbApi.page.get as any,
+    createDocument: async (parentId?: string) => dbApi.page.create(parentId!, 'page') as any,
+    updateDocumentContent: async (id: string, content: any) => dbApi.page.update(id, { content }),
+
+    updateDocumentMetadata: dbApi.page.update,
+    deleteDocument: dbApi.page.delete,
+
+    createPage: async (parentId?: string) => dbApi.page.create(parentId!, 'page'),
+    property: {
+      add: dbApi.db.addProperty,
+      update: dbApi.db.updateProperty,
+      delete: dbApi.db.deleteProperty,
+      setValue: dbApi.value.set
     }
   };
 }

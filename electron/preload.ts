@@ -1,20 +1,89 @@
 import { contextBridge, ipcRenderer } from 'electron'
 
 contextBridge.exposeInMainWorld('electronAPI', {
-  // Pages
-  getPages: () => ipcRenderer.invoke('db:getPages'),
-  getPage: (id: string) => ipcRenderer.invoke('db:getPage', id),
-  createPage: (parentId?: string) => ipcRenderer.invoke('db:createPage', parentId),
-  updatePage: (id: string, updates: any) => ipcRenderer.invoke('db:updatePage', { id, updates }),
-  deletePage: (id: string) => ipcRenderer.invoke('db:deletePage', id),
+  // --- DATABASE ---
+  createDatabase: (input: { title: string; parentPageId?: string }) =>
+    ipcRenderer.invoke('db:create', input),
 
-  // Database Properties
-  getDatabaseProperties: (databaseId: string) => ipcRenderer.invoke('db:getDatabaseProperties', databaseId),
-  createDatabaseProperty: (databaseId: string, name: string, type: string, options?: any) => 
-    ipcRenderer.invoke('db:createDatabaseProperty', { databaseId, name, type, options }),
+  getDatabase: (id: string) =>
+    ipcRenderer.invoke('db:get', id),
 
-  // Property Values
-  getPropertyValues: (pageId: string) => ipcRenderer.invoke('db:getPropertyValues', pageId),
-  setPropertyValue: (pageId: string, propertyId: string, value: any) => 
-    ipcRenderer.invoke('db:setPropertyValue', { pageId, propertyId, value }),
+  // --- PROPERTIES ---
+  db: {
+    addProperty: (databaseId: string, name: string, type: string, config?: any) =>
+      ipcRenderer.invoke('property:add', { databaseId, name, type, config }),
+
+    updateProperty: (id: string, updates: any) =>
+      ipcRenderer.invoke('property:update', { id, updates }),
+
+    deleteProperty: (id: string) =>
+      ipcRenderer.invoke('property:delete', id),
+
+    getProperties: (databaseId: string) =>
+      ipcRenderer.invoke('property:getAll', databaseId),
+  },
+
+  // --- PAGES (ROWS) ---
+  page: {
+    create: (parentId: string, parentType: 'database' | 'page' = 'database') =>
+      ipcRenderer.invoke('page:create', { parentId, parentType }),
+
+    get: (id: string) =>
+      ipcRenderer.invoke('page:get', id),
+
+    getMany: (parentId: string) =>
+      ipcRenderer.invoke('page:getMany', parentId),
+
+    update: (id: string, updates: any) =>
+      ipcRenderer.invoke('page:update', { id, updates }),
+
+    delete: (id: string) =>
+      ipcRenderer.invoke('page:delete', id),
+  },
+
+  // --- VALUES ---
+  value: {
+    set: (pageId: string, propertyId: string, value: any) =>
+      ipcRenderer.invoke('value:set', { pageId, propertyId, value }),
+
+    get: (pageId: string, propertyId: string) =>
+      ipcRenderer.invoke('value:get', { pageId, propertyId }),
+
+    getPageMap: (pageId: string) =>
+      ipcRenderer.invoke('value:getPageMap', pageId),
+  },
+
+  // --- LEGACY/COMPATIBILITY API ---
+  getDocuments: () => ipcRenderer.invoke('page:getMany', null),
+
+  getDocument: (id: string) => ipcRenderer.invoke('page:get', id),
+
+  createDocument: (parentId?: string) =>
+    ipcRenderer.invoke('page:create', { parentId, parentType: 'page' }),
+
+  updateDocumentContent: (id: string, content: any) =>
+    ipcRenderer.invoke('page:update', { id, updates: { content } }),
+
+  updateDocumentMetadata: (id: string, updates: any) =>
+    ipcRenderer.invoke('page:update', { id, updates }),
+
+  deleteDocument: (id: string) => ipcRenderer.invoke('page:delete', id),
+
+  // Legacy Aliases for Tests
+  createPage: (parentId?: string) =>
+    ipcRenderer.invoke('page:create', { parentId, parentType: 'page' }),
+
+  property: {
+    add: (databaseId: string, name: string, type: string, config?: any) =>
+      ipcRenderer.invoke('property:add', { databaseId, name, type, config }),
+
+    update: (id: string, updates: any) =>
+      ipcRenderer.invoke('property:update', { id, updates }),
+
+    delete: (id: string) =>
+      ipcRenderer.invoke('property:delete', id),
+
+    setValue: (pageId: string, propertyId: string, value: any) =>
+      ipcRenderer.invoke('value:set', { pageId, propertyId, value }),
+  }
 })

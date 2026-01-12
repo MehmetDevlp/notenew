@@ -10,6 +10,11 @@ export default defineConfig({
   build: {
     sourcemap: 'hidden',
   },
+  server: {
+    hmr: {
+      overlay: false // HMR overlay kapat
+    }
+  },
   plugins: [
     react({
       babel: {
@@ -31,6 +36,9 @@ export default defineConfig({
       },
       preload: {
         input: 'electron/preload.ts',
+        onstart(args) {
+          args.reload() // ⬅️ PRELOAD DEĞİŞİNCE RELOAD
+        },
         vite: {
           build: {
             rollupOptions: {
@@ -53,7 +61,7 @@ export default defineConfig({
       clickUrl: 'https://www.trae.ai/solo?showJoin=1',
       autoTheme: true,
       autoThemeTarget: '#root'
-    }), 
+    }),
     tsconfigPaths()
   ],
 })
